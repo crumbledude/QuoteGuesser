@@ -1,26 +1,50 @@
 import discord
-from common.db_connector import Db
+from discord.ext import commands
+
 import os
+import sys
+import asyncio
 from dotenv import find_dotenv, load_dotenv
+from colorama import  Fore
 
 #Load environment variables
 dotenv_path = find_dotenv()
 load_dotenv(dotenv_path)
 
-TEST_DB_IP = os.getenv("TEST_DB_IP")
-TEST_DB_USER = os.getenv("TEST_DB_USER")
-TEST_DB_PASS = os.getenv("TEST_DB_PASS")
-REAL_DB_IP = os.getenv("REAL_DB_IP")
-REAL_DB_USER = os.getenv("REAL_DB_USER")
-REAL_DB_PASS = os.getenv("REAL_DB_PASS")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-def main():
-    #test_db = Db(TEST_DB_IP, "25576", TEST_DB_USER, TEST_DB_PASS, "testdb")
-    # print(test_db.get_all_values('students'))
-    # print(test_db.get_rand_value("students"))
-    actuall_db = Db(REAL_DB_IP, "3306", REAL_DB_USER, REAL_DB_PASS, "quotedb")
-    print(actuall_db.get_rand_value("quotetbl"))
+#Set up the command prefix
+client = commands.Bot(command_prefix="=", intents=discord.Intents.all())
 
+#Runs when the bot connects to discord
+@client.event
+async def on_ready():
+    print(f"{Fore.MAGENTA}Bot is connected to discord{Fore.RESET}")
 
-if __name__ == '__main__':
-    main()
+#Used to sync the slash commands
+@client.command(name="sync")
+async def sync(ctx):
+    synced = await client.tree.sync()
+    print(f"Synced {len(synced)} command(s).")
+
+@client.tree.command(name="ping", description="Shows the bot's latency in ms.")
+async def ping(interaction: discord.Interaction):
+    bot_latency = round(client.latency * 1000)
+    await interaction.response.send_message(f"Bot latency: {bot_latency}ms", ephemeral=True)
+
+#Used to load all of the files in the cog folder
+async def load():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
+            await client.load_extension(f"cogs.{filename[:-3]}")
+            print(f"{Fore.YELLOW}{filename[:-3]} is loaded{Fore.RESET}")
+
+async def main():
+    async with client:
+        #Load any cogs
+        await load()
+        #Run the bot
+        await client.start(BOT_TOKEN)
+
+#Runs the discord bot
+asyncio.run(main())

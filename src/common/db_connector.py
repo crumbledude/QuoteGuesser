@@ -24,6 +24,6 @@ class Db:
         return self.cursor.fetchall()
 
     def get_rand_value(self, table):
-        sql_formula = f"SELECT * FROM {table} ORDER BY RAND()"
-        self.cursor.execute((sql_formula))
+        sql_formula = f"SELECT * FROM {table} ORDER BY RAND() LIMIT 1"
+        self.cursor.execute(sql_formula)
         return self.cursor.fetchone()
