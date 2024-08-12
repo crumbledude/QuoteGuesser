@@ -43,3 +43,12 @@ class Db:
             return self.cursor.fetchone()
         except:
             return "Error"
+
+    def add_quote(self, quote, sayer, quoter, server, date):
+        pass
+
+    def get_list_names(self):
+        pass
+
+   def get_quotes_with_filter(self):
+       pass

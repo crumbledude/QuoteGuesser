@@ -4,7 +4,6 @@ from discord.ext import commands
 import os
 import asyncio
 from dotenv import find_dotenv, load_dotenv
-from colorama import  Fore
 
 #Load environment variables
 dotenv_path = find_dotenv()
@@ -18,7 +17,7 @@ client = commands.Bot(command_prefix="=", intents=discord.Intents.all())
 #Runs when the bot connects to discord
 @client.event
 async def on_ready():
-    print(f"{Fore.MAGENTA}Bot is connected to discord{Fore.RESET}")
+    print(f"Bot is connected to discord")
 
 #Used to sync the slash commands
 @client.command(name="sync")
@@ -36,7 +35,7 @@ async def load():
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
             await client.load_extension(f"cogs.{filename[:-3]}")
-            print(f"{Fore.YELLOW}{filename[:-3]} is loaded{Fore.RESET}")
+            print(f"{filename[:-3]} is loaded")
 
 async def main():
     async with client:

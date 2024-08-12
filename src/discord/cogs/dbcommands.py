@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from dotenv import find_dotenv, load_dotenv
-from colorama import Fore
 
 import sys
 import os
@@ -31,7 +30,7 @@ class DbCommands(commands.Cog):
     #Runs after connected to discord
     @commands.Cog.listener()
     async def on_ready(self):
-        print(f"{Fore.GREEN}DBCommands.py is ready{Fore.RESET}")
+        print(f"DBCommands.py is ready")
         
 
     #Runs after each message sent and checks if it is to do with the game
@@ -150,5 +149,5 @@ async def setup(client):
         await client.add_cog(DbCommands(client))
     except:
         #If you cannot connect to the database, then stop this file from loading
-        print(f"{Fore.RED}Cannot connect to database, so Db commands isn't ready{Fore.RESET}")
+        print(f"Cannot connect to database, so Db commands isn't ready")
     

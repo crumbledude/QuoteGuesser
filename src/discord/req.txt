@@ -1,4 +1,3 @@
 discord.py
-colorama
 mysql-connector-python
 python-dotenv
