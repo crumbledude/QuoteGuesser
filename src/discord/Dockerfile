@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM python:3.12-slim
 
 ADD ./discord /discord
 ADD ./common /common
