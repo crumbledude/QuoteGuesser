@@ -24,7 +24,7 @@ jobs:
             - name: Build and push
               uses: docker/build-push-action@v5.3.0
               with:
-                  context: src
+                  context: ./src
                   file: ./discord/Dockerfile
                   platforms: linux/amd64,linux/arm64/v8
                   push: true
