@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 
 import os
-import sys
 import asyncio
 from dotenv import find_dotenv, load_dotenv
 from colorama import  Fore

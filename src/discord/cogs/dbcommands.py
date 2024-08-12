@@ -1,12 +1,16 @@
 import discord
 from discord.ext import commands
-from discord.ext import tasks
 from discord import app_commands
-from common.db_connector import Db
-from cog_helpers.guess import GuessGame
-import os
 from dotenv import find_dotenv, load_dotenv
 from colorama import Fore
+
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath("./cog_helpers"))
+from guess import GuessGame
+sys.path.insert(1, os.path.abspath("../common"))
+from db_connector import Db
 
 #Find envrionment variables
 dotenv_path = find_dotenv()
