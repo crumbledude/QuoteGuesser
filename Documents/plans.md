@@ -13,7 +13,7 @@
 
 ### Discord
 - [x] Random quote
-- [] Guess sayer & quoter
+- [x] Guess sayer & quoter
 
 ### Web
 - [] Find quotes/see list

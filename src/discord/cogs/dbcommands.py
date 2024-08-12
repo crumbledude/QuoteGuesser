@@ -1,7 +1,9 @@
 import discord
 from discord.ext import commands
+from discord.ext import tasks
 from discord import app_commands
 from common.db_connector import Db
+from cog_helpers.guess import GuessGame
 import os
 from dotenv import find_dotenv, load_dotenv
 from colorama import Fore
@@ -15,25 +17,6 @@ TEST_DB_IP = os.getenv("TEST_DB_IP")
 TEST_DB_USER = os.getenv("TEST_DB_USER")
 TEST_DB_PASS = os.getenv("TEST_DB_PASS")
 
-class GuessGame:
-    def __init__(self, channel, user, quote, who_said, who_quoted, bot_client):
-        self.channel = channel
-        self.user = user
-        self.quote = quote
-        self.who_said = who_said
-        self.who_quoted = who_quoted
-        self.bot_client = bot_client
-        self.active = True
-        self.who_quoted_guessed = False
-        self.who_said_guessed = False
-
-    async def send_quote_message(self):
-        quote_embed = discord.Embed(title="Guess who quoted & said this quote", color=discord.Color.gold())
-        quote_embed.add_field(name="Quote:", value=self.quote)
-        await self.channel.send(embed = quote_embed)
-
-
-
 class DbCommands(commands.Cog):
     def __init__(self, client):
         self.client = client
@@ -46,19 +29,81 @@ class DbCommands(commands.Cog):
     async def on_ready(self):
         print(f"{Fore.GREEN}DBCommands.py is ready{Fore.RESET}")
         
+
+    #Runs after each message sent and checks if it is to do with the game
     @commands.Cog.listener()
     async def on_message(self, message):
         #Check if a quote game is running
-        if self.game.active:
-            #If a game is running, check the message is in the right channel and it is not the bots message
-            if message.channel.id == self.game.channel.id and message.author.id != self.client.user.id:
-                #If someone guesses who said the quote, this is  run
-                if message.content.lower().strip() in self.game.who_said:
-                    if self.game.who_said_guessed == False:
-                        await message.channel.send("Who said guessed")
-                        self.game.who_said_guessed = True
-                    else:
-                        await message.channel.send("Who said already guessed")
+        if self.game is not None: #check if created
+            #it is
+            if self.game.active:
+                #run
+                await self.on_message_logic(message)
+            else:
+                #dont run
+                pass
+
+    #The logic for the message checking
+    async def on_message_logic(self, message):
+        #If a game is running, check the message is in the right channel and it is not the bots message
+        if message.channel.id == self.game.channel.id and message.author.id != self.client.user.id:
+            #If someone guesses who said the quote, this is  run
+
+            #EDGE CASE - for if someone has quoted themselves
+            if self.game.who_quoted == self.game.who_said and message.content.lower().strip() == self.game.who_quoted:
+                self.game.round_said_guessed = message.author.id
+                self.game.round_quote_guessed = message.author.id
+                await self.game.successful_guess(True)
+                await self.game.successful_guess(False)
+
+            if message.content.lower().strip() in self.game.who_said:
+                if self.game.round_said_guessed is None:
+                    #If someone has guessed who has said the quote
+                    self.game.round_said_guessed = message.author.id
+                    await self.game.successful_guess(True)
+                else:
+                    #If someone guesses the who said after someone else has
+                    await message.channel.send("Who said already guessed")
+            #If someone gusses who quoted, this is run
+            elif message.content.lower().strip() in self.game.who_quoted:
+                if self.game.round_quote_guessed is None:
+                    #If someone has guessed who has quoted the quote
+                    self.game.round_quote_guessed = message.author.id
+                    await self.game.successful_guess(False)
+                else:
+                    #If someone guesses the who quoted after someone else has
+                    await message.channel.send("Who quoted already guessed")
+
+            #Need to add people who guessed to a scoreboard
+            if self.game.round_quote_guessed is not None and self.game.round_said_guessed is not None:
+                #Both thing have been guessed, run score and cancel task
+                await self.game.score()
+        #Check how many rounds are left
+
+    @app_commands.command(name="start_game", description="Starts the quote guessing game")
+    async def start_game(self, interaction: discord.Interaction):
+
+        #Check if game is created, if it is, check if it is active, if it is, dont run, if not then run
+        #If it is not created, then run
+
+        if self.game is not None: #check if created
+            #it is
+            if not self.game.active:
+                #run
+                await self.start_game_logic(interaction)
+            else:
+                #dont run
+                await interaction.response.send_message("There is already a game running!", ephemeral=True)
+        else:
+            #run
+            await self.start_game_logic(interaction)
+
+    async def start_game_logic(self, interaction):
+        self.game = GuessGame(interaction.channel, interaction.user.id, self.actuall_db, self.client)
+        self.game.active = True
+        self.game.game_loop.start()
+        await interaction.response.send_message("Game successfully created", ephemeral=True)
+
 
     #Send a random quote
     @app_commands.command(name="random_quote", description="Sends a random quote")
@@ -92,39 +137,6 @@ class DbCommands(commands.Cog):
         quote_embed.set_footer(text=f"Quoted by {first_quoter} {last_quoter}")
         
         await interaction.response.send_message(embed = quote_embed)
-        
-
-    @app_commands.command(name="start_game", description="Starts the quote guessing game")
-    async def start_game(self, interaction: discord.Interaction):
-        #Get a random quote, who said it and any alias, then make a new game object
-        rand_quote = self.actuall_db.get_rand_value("quotetbl")
-        print(rand_quote)
-        sayer_name_table = self.actuall_db.get_name(rand_quote[0])
-        quoter_name_table = self.actuall_db.get_name(rand_quote[1])
-
-        sayer_aliases = [sayer_name_table[1].lower(), sayer_name_table[2].lower()]
-        quoter_aliases = [quoter_name_table[1].lower(), quoter_name_table[2].lower()]
-
-        #Add any aliases ------- NEEED TO IMPLIMENT IF THEY HAVE MORE THAN ONE ALIAS
-        # if sayer_name_table[3]:
-        #     for name in sayer_name_table[3].lower():
-        #         sayer_aliases.append(name)
-        #
-        # if quoter_name_table[3]:
-        #     for name in quoter_name_table[3].lower():
-        #         quoter_aliases.append(name)
-        
-        if sayer_name_table[3]:
-            sayer_aliases.append(sayer_name_table[3].lower())
-
-        if quoter_name_table[3]:
-            quoter_aliases.append(quoter_name_table[3].lower())
-
-        print(f"sayer aliases: {sayer_aliases}")
-        self.game = GuessGame(interaction.channel, interaction.user.id, rand_quote[2], sayer_aliases, quoter_aliases, self.client)
-        await self.game.send_quote_message()
-
-        await interaction.response.send_message("Game successfully created", ephemeral=True)
 
 
 

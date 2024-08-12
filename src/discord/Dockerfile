@@ -1,8 +1,10 @@
 FROM python:3.12
 
-ADD common /common
-ADD discord /discord
+ADD ./discord /discord
+ADD ./common /common
 
-RUN pip install -r requirements.txt
+WORKDIR /discord
+
+RUN pip install -r req.txt
 
 CMD ["python", "main.py"]
